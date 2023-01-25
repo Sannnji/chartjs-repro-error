@@ -1,0 +1,35 @@
+name: Deploy Previews
+on: [pull_request]
+permissions:
+  contents: read
+  pull-requests: write
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    outputs:
+      link: ${{ steps.deploy.outputs.preview-url }}
+    steps:
+      - uses: actions/checkout@v3
+      - name: Deploy
+        id: deploy
+        uses: amondnet/vercel-action@v25.1.0
+        with:
+          vercel-token: ${{ secrets.VERCEL_AUTH_TOKEN }}
+          vercel-org-id: ${{ secrets.VERCEL_ORG_ID}}
+          vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID}}
+
+  comment:
+    needs: [deploy]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Get DateTime
+        id: datetime
+        run: echo "::set-output name=date::$(date '+%b %e, %Y at %r (%Z)')"
+      - name: Create PR Comment
+        uses: marocchino/sticky-pull-request-comment@v2
+        with:
+          header: preview
+          message: |
+            | Name | Status | Preview | Updated |
+            | :--- | :----- | :------ | :------ |
+            | **Frontend** | ✅ | [Link]( ${{ needs.deploy.outputs.link }} ) | ${{ steps.datetime.outputs.date }} |
